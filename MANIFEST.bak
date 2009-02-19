@@ -1,0 +1,12 @@
+.cvsignore
+Build.PL
+Changes
+.*.swp$
+lib/Test/Specific.pm
+MANIFEST
+META.yml			# Will be created by "make dist"
+README
+t/00-load.t
+t/boilerplate.t
+t/pod-coverage.t
+t/pod.t

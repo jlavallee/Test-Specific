@@ -1,0 +1,8 @@
+--- #YAML:1.0
+name: Test-Specific
+version: 0.01
+author:
+  - Jeff Lavallee <jeff@zeroclue.com>
+abstract: offers Test::More style test functions that are more specific than "ok()".
+license: perl
+generated_by: Module::Build version 0.2611, without YAML.pm

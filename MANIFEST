@@ -1,0 +1,17 @@
+.*.swp
+.cvsignore
+Build.PL
+Changes
+lib/Test/Specific.pm
+MANIFEST
+META.yml			# Will be created by "make dist"
+README
+t/00-load.t
+t/01-truth_and_defined.t
+t/02-number_tests.t
+t/03-string_tests.t
+t/04-xml_tests.t
+t/boilerplate.t
+t/pod-coverage.t
+t/pod.t
+Test-Specific-0.01.tar.gz
