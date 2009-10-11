@@ -1,6 +1,6 @@
 #!perl -T
 
-use Test::More tests => 43;
+use Test::More tests => 36;
 use Test::Builder::Tester;
 use Test::Builder::Tester::Color;
 
@@ -14,8 +14,6 @@ is_integer(                        0,           'is integer works for 0');
 is_integer(              -1000000000, 'is integer works for -1000000000');
 is_integer(               1000000000,  'is integer works for 1000000000');
 is_integer( '9999999999999999999999',  'is integer works for lots of 9s');
-
-looks_like_money( 5.95, 'looks like money works for 5.95' );
 
 
 numbers_order_of_magnitude( 1,     9,  'numbers order of magnitude works for 1, 9' );
@@ -34,10 +32,6 @@ numbers_eq( -1, -1,       'numbers eq works for -1, -1' );
 # note that the last one fails because it overflows to 1e+22
 run_single_value_fail_tests( 'is_integer', '# %s does not look like an integer',
                              undef, '', 1.12312, -1.1, -99999999999.999, 999999999999999999999999999,
-                           );
-
-run_single_value_fail_tests( 'looks_like_money', '# %s does not look like money',
-                             undef, '', 1.12312, -1.1, -99999999999.999, -3.357, 
                            );
 
 

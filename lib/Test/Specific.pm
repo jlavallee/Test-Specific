@@ -20,21 +20,10 @@ our @EXPORT = qw/
                     numbers_close
                     numbers_eq
                     numbers_order_of_magnitude
-                    looks_like_money
 
                     strings_eq
                     strings_eq_ignoring_whitespace
 
-                    is_equivalent_xml
-                    is_parsable_xml
-
-                    text_files_eq
-                    binary_files_eq
-
-                    dies
-                    warns
-
-                    sql_is_preparable
                 /;
 
 my $Test = Test::Builder->new;
@@ -53,15 +42,9 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Test::Specific is like Test::More - it exports a bunch of useful routines for testing.
-
-TODO: add examples
+Test::Specific provides a collection of specific test functions.
 
 =head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
-
 
 =over 4
 
@@ -70,14 +53,6 @@ is_not_defined
 is_true
 is_not_true
 is_integer
-looks_like_money
-text_files_eq
-binary_files_eq
-sql_is_preparable
-is_equivalent_xml
-is_parsable_xml
-dies
-warns
 numbers_close
 numbers_eq
 numbers_order_of_magnitude
@@ -110,36 +85,6 @@ sub is_not_true {
     $Test->ok( do { not $input }, $name );
 }
 
-sub dies {
-    my( $coderef, $exception) = @_;
-
-    eval {
-        &$coderef;
-    };
-    my $error = $@;
-
-    unless( $error ){
-        $Test->ok( 0, "Codeblock didn't die" );
-    }else{
-        $Test->like( $error, $exception, );
-    }
-}
-sub warns {
-    my( $coderef, $exception) = @_;
-
-    my $warning;
-    local $SIG{__WARN__} = sub {
-        $warning = shift;
-    };
-
-    &$coderef;
-
-    unless( $warning ){
-        $Test->ok( 0, "Codeblock didn't warn" );
-    }else{
-        $Test->like( $warning, $exception, );
-    }
-}
 
 sub numbers_close {
     my ( $input, $input2 ) = @_;
@@ -165,11 +110,6 @@ sub numbers_close {
     }else{
         $Test->ok(1);
     }
-
-    #$Test->cmp_ok(sprintf('%.10f',$input),
-    #              '==',
-    #              sprintf('%.10f',$expected),
-    #             );
 }
 
 sub numbers_eq {
@@ -202,7 +142,8 @@ sub numbers_order_of_magnitude {
 
 sub strings_eq {
   my ($input, $expected ) = @_;
-  $Test->ok( _strings_eq($input, $expected) );
+  $Test->ok( _strings_eq($input, $expected) )
+    or $Test->diag("      got: $input\nexpected: $expected");
 }
 
 
@@ -215,7 +156,8 @@ sub _strings_eq {
 sub strings_eq_ignoring_whitespace {
   my ( $input, $expected ) = @_;
 
-  $Test->ok( _strings_eq_ignoring_whitespace($input, $expected) );
+  $Test->ok( _strings_eq_ignoring_whitespace($input, $expected) )
+    or $Test->diag("      got: $input\nexpected: $expected");
 }
 
 sub _strings_eq_ignoring_whitespace {
@@ -240,145 +182,12 @@ sub _looks_like_xml_or_html {
     return 1 if $string =~ m#^\s*<[.=\w\s"/!:?-]+>#mg;
 }
 
-sub _make_temp_file {
-    my ( $content, $suffix ) = @_;
-    $suffix ||= '.txt';
-    my ($fh, $filename) = tempfile( DIR => tempdir( CLEANUP => 1 ), SUFFIX => $suffix );
-    print $fh $content;
-    return ( $fh, $filename );
-}
-
-# TODO: use Test::Files....
-
-sub text_files_eq {
-    my ( $input_filename, $test_filename ) = @_;
-
-    unless( _binary_files_eq( $input_filename, $test_filename ) ){
-        _text_files_eq( $input_filename, $test_filename );
-    }
-}
-
-sub binary_files_eq {
-    my ( $input_filename, $test_filename ) = @_;
-
-    die "Binary files $input_filename and $test_filename are not equal at "
-       .(caller)[2]." of package ".(caller)[0]."\n" 
-        unless _binary_files_eq( $input_filename, $test_filename );
-}
-
-sub _binary_files_eq {
-    my ( $input_filename, $test_filename ) = @_;
-
-    my ( $input_fh, $test_fh ) = _multi_open( $input_filename, $test_filename );
-
-    my $input_ctx = Digest::MD5->new;
-    my $test_ctx  = Digest::MD5->new;
-
-    $input_ctx->addfile( $input_fh );
-    $test_ctx->addfile(  $test_fh  );
-
-    my $input_digest = $input_ctx->hexdigest;
-    my $test_digest  = $test_ctx->hexdigest;
-
-    _multi_close( $input_fh, $test_fh );
-    return $input_digest eq $test_digest ;
-}
-
-sub _multi_open {
-    my ( @filenames ) = @_;
-
-    my @fhs;
-    foreach my $filename ( @filenames ) {
-        open( my $fh, $filename ) 
-            or die "couldn't open $filename for reading: $!\n";
-        push @fhs, $fh;
-    }
-    return @fhs;
-}
-
-sub _multi_close {
-    my ( @fhs ) = @_;
-
-    foreach my $fh ( @fhs ) {
-        close $fh or die "couldn't close filehandle: $!\n";
-    }
-}
-
-
-sub _text_files_eq {
-    my ( $input_filename, $test_filename ) = @_;
-
-    my ( $input_fh, $test_fh ) = _multi_open( $input_filename, $test_filename );
-    while(<$input_fh>){
-        my $test_line = <$test_fh>;
-        die "'$_'  from $input_filename ne '$test_line'  from $test_filename "
-           ." at line # $. of $test_filename at " 
-           .(caller)[2]." of package ".(caller)[0]."\n" 
-            unless _strings_eq( $_, $test_line );
-    }
-    # we might have read off the end of the input file but not test
-    my $test_line = <$test_fh> ;
-    if( defined $test_line ){
-        die "$test_filename contains extra lines(s), starting with line # $.:\n"
-           .$test_line
-           ." at line # $. of $test_filename at " 
-           .(caller)[2]." of package ".(caller)[0]."\n" ;
-    }
-    _multi_close( $input_fh, $test_fh );
-}
-
-sub sql_is_preparable {
-    my ( $dbh, $sql) = @_;
-    die "DBH invalid" unless defined $dbh and $dbh->ping;
-    $dbh->prepare( $sql ) or die "could not prepare $sql: ".$dbh->errstr."\n";
-}
-
-sub is_equivalent_xml {
-    my ( $input, $expected ) = @_;
-    my $inputObj    = XML::Simple->new(ForceArray => 1, AttrIndent => 1);
-    my $expectedObj = XML::Simple->new(ForceArray => 1, AttrIndent => 1);
-
-    my $inputRef    = $inputObj->XMLin( $input );
-    my $expectedRef = $expectedObj->XMLin( $expected );
-
-    my $inputString  = $inputObj->XMLout( $inputRef );
-    my $expectedString = $expectedObj->XMLout( $expectedRef );
-    die "XML documents are not equivalent\n\n$inputString\n ne \n$expectedString\n at line ".(caller)[2]." of package ".(caller)[0]."\n" unless _strings_eq_ignoring_whitespace($inputString, $expectedString);
-}
-
-sub is_parsable_xml {
-  my ( $xml) = @_;
-
-  my $parser = XML::Parser->new;
-  my $obj = eval {$parser->parse( $xml )};
-
-
-  if($@){
-    if(ref $@){
-      die $@->getMessage();
-    }else{
-      die $@;
-    }
-  }
-}
-
 sub is_integer {
   my ( $input ) = @_;
   $Test->ok( defined $input
              and $input =~ /^\-?\d+$/
            )
     or $Test->diag( ( defined $input ? $input : '' )." does not look like an integer");
-}
-  
-
-sub looks_like_money {
-  my ( $input, ) = @_;
-  $Test->ok( defined $input
-             and $input ne ''
-             and sprintf("%0.3f", $input) =~ /^\d+\.\d{2}0$/
-             and sprintf("%0.10f", $input) =~ /^\d+\.\d{2}00000000$/
-           )
-    or $Test->diag( ( defined $input ? $input : '' )." does not look like money");
 }
   
 
@@ -424,58 +233,6 @@ Maybe it should be named "looks_like_integer"
 
 =cut
 
-=head2 looks_like_money( $input )
-
-This method tests that the input *looks like* money. 
-
-=cut
-
-=head2 dies($coderef, $exception)
-
-Tests that the given codeblock dies.  If $exception is passed,
-asserts that the exception matches the regexp.  $exception
-can be a regex in the form '/foo/' or qr/foo/.
-
-=cut
-
-=head2 warns($coderef, $exception)
-
-Tests that the given codeblock warns.  If $exception is passed,
-asserts that the exception matches the regexp.  $exception
-can be a regex in the form '/foo/' or qr/foo/.
-
-=cut
-
-=head2 is_equivalent_xml($input, $expected)
-
-This method tests that 2 pieces of XML are equivalent.
-
-=cut
-
-=head2 is_parsable_xml($xml)
-
-This method tests that a piece of XML is parsable.
-
-=cut
-
-=head2 hashes_eq($input, $expected)
-
-This method tests that 2 hashes are equal
-
-=cut
-
-=head2 num_close($input, $expected)
-
-This method tests that 2 numbers are close.
-Close is defined to be 10 decimal places.
-
-=cut
-
-=head2 num_eq( $input, $expected )
-
-This method tests that 2 numbers are equal.
-
-=cut
 
 =head2 strings_eq( $input, $expected )
 
@@ -485,22 +242,9 @@ This method tests that 2 strings are equal.
 
 =head2 strings_eq_ignoring_whitespace( $input, $expected )
 
-This method tests that 2 strings are equal, ignoring whitespace.
+This method tests that 2 strings are equal, ignoring whitespaced differences
 
 =cut
-
-=head2 binary_files_eq( $input_filename, $test_filename )
-
-    Tests that two binary files have identical contents
-
-=cut 
-
-=head2 text_files_eq( $input_filename, $test_filename )
-
-    Tests that two text files have identical contents
-
-=cut
-
 
 =head2 numbers_close( $input, $expected )
 
@@ -520,12 +264,6 @@ This method tests that 2 strings are equal, ignoring whitespace.
 
 =cut
 
-=head2 sql_is_preparable( $dbh, $sql )
-
-    Tests that the supplied SQL text can be prepared using the given database handle.
-
-=cut
-
 
 =head1 AUTHOR
 
@@ -536,13 +274,6 @@ Jeff Lavallee, C<< <jeff at zeroclue.com> >>
 The tests for this could be a lot more complete.  Please feel free to submit 
 additional test cases (especailly if they expose bugs!)
 
-
-
-It would be nice to print better diagnostics - the values passed in, for example.  
-
-Unfortunately, Test::Builder::Tester doesn't seem to play very nicely with using
-Test::Builder->diag() to print such messages.  If you know the right way, please
-let me know.  Thanks!
 
 =head1 BUGS
 
