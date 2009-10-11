@@ -1,4 +1,5 @@
 \.cvsignore
+\.git
 ^_build
 ^Build$
 ^blib
