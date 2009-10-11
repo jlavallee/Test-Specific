@@ -1,0 +1,7 @@
+Build
+_build
+.*.swp
+blib
+*.bak
+Makefile
+*.tar.gz
