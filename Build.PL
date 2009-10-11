@@ -7,6 +7,12 @@ my $builder = Module::Build->new(
     license             => 'perl',
     dist_author         => 'Jeff Lavallee <jeff@zeroclue.com>',
     dist_version_from   => 'lib/Test/Specific.pm',
+    meta_merge     => {
+        resources => {
+            bugtracker => 'http://rt.cpan.org/NoAuth/Bugs.html?Dist=Test-Specific',
+            repository => 'http://github.com/jlavallee/Test-Specific/',
+        }
+    },
     build_requires => {
         'Test::More'            => 0,
         'Digest::MD5'           => '',
